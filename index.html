@@ -1,1 +1,41 @@
-
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>BlockVerse — Neon Rush 3D</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<div id="hud">
+  <div class="brand">⚡ BLOCKVERSE <span>NEON RUSH</span></div>
+  <div class="stats">
+    <div>🪙 <b id="coins">0</b>/10</div>
+    <div>🏁 Fase <b id="level">1</b></div>
+    <div>⚡ <b id="speed">0</b></div>
+  </div>
+</div>
+<canvas id="game" tabindex="0" aria-label="Jogo 3D de parkour"></canvas>
+<div id="message"></div>
+<div id="hint">WASD mover • Espaço pular • Shift correr • Mouse olhar • R reiniciar • Esc menu</div>
+<div id="menu" class="hidden" aria-hidden="true">
+  <div class="panel">
+    <h1>PAUSADO</h1>
+    <p>Neon Rush 3D</p>
+    <button id="resume">Continuar</button>
+    <button id="restartBtn">Reiniciar</button>
+    <button id="settingsBtn">Configurações</button>
+    <button id="manualBtn">Manual</button>
+    <section id="settings" class="hidden">
+      <label>Qualidade
+        <select id="quality"><option value="1">Alta</option><option value=".75">Média</option><option value=".5">Baixa</option></select>
+      </label>
+    </section>
+    <section id="manual" class="hidden">
+      <p><b>Controles</b><br>WASD ou setas: mover<br>Espaço: pular<br>Shift: correr<br>Mouse: câmera<br>R: voltar ao início<br>Esc: pausar</p>
+    </section>
+  </div>
+</div>
+<script type="module" src="game.js"></script>
+</body>
+</html>
