@@ -17,7 +17,7 @@ const camera=new THREE.PerspectiveCamera(68,innerWidth/innerHeight,.1,500);
 let yaw=0,pitch=.28,distance=11;
 const clock=new THREE.Clock();
 const keys={};
-let paused=false,coins=0,level=1,won=false,quality=1,dragging=false,lastX=0,lastY=0;
+let paused=false,coins=0,level=1,won=false,quality=1,dragging=false,lastX=0,lastY=0,shiftHeld=false;
 let checkpoint={x:0,y:1.5,z:4};
 let jumpPressed=false;
 
@@ -35,15 +35,27 @@ const playerMat=mat(0xe8eef5,.35,.15);
 const darkMat=mat(0x182534,.3,.5);
 
 const platforms=[
-{x:-4,z:0,w:8,d:9,h:1.5,spawn:true},{x:-5,z:12,w:10,d:8,h:1},
-{x:-1,z:20,w:6,d:5,h:1.4},{x:5,z:29,w:5,d:5,h:2},
-{x:1,z:38,w:7,d:5,h:1},{x:-5,z:47,w:5,d:5,h:2.2},
-{x:1,z:56,w:6,d:6,h:1.2},{x:6,z:67,w:5,d:5,h:2.8},
-{x:0,z:78,w:7,d:6,h:1},{x:-6,z:89,w:6,d:5,h:2.5},
-{x:0,z:101,w:10,d:10,h:1}
+{x:-4,z:0,w:10,d:11,h:2,spawn:true},{x:-6,z:13,w:12,d:9,h:1.5},
+{x:-2,z:22,w:9,d:7,h:1.8},{x:4,z:30,w:8,d:7,h:2.2},
+{x:0,z:39,w:9,d:7,h:1.8},{x:-6,z:48,w:9,d:7,h:2.5},
+{x:1,z:57,w:9,d:8,h:1.8},{x:6,z:68,w:8,d:8,h:3},
+{x:0,z:79,w:10,d:8,h:2},{x:-6,z:90,w:9,d:7,h:2.7},
+{x:0,z:101,w:12,d:11,h:2}
 ];
 
 const world=new THREE.Group();scene.add(world);
+// Cidade suspensa: prédios altos abaixo e ao redor do percurso.
+const buildingMat=mat(0x263746,.82,.08);
+const windowMat=new THREE.MeshStandardMaterial({color:0x9bdcff,emissive:0x3d8db8,emissiveIntensity:1.4,roughness:.35,metalness:.25});
+for(let i=0;i<34;i++){
+  const x=-42+(i*17)%84, z=-18+Math.floor(i/3)*18, w=5+(i%4)*2, d=5+(i%3)*2, h=12+(i%7)*7;
+  const b=new THREE.Mesh(new THREE.BoxGeometry(w,h,d),buildingMat.clone());
+  b.position.set(x,h/2,z);b.castShadow=true;b.receiveShadow=true;world.add(b);
+  for(let row=0;row<Math.min(5,Math.floor(h/6));row++){
+    const win=new THREE.Mesh(new THREE.BoxGeometry(w*.58,.45,.08),windowMat);
+    win.position.set(x,h-3-row*3,z-d/2-.05);world.add(win);
+  }
+}
 const solids=[];
 for(const b of platforms){
   const m=new THREE.Mesh(new THREE.BoxGeometry(b.w,b.h,b.d),platformMat.clone());
@@ -52,9 +64,11 @@ for(const b of platforms){
   const e=new THREE.Mesh(new THREE.BoxGeometry(b.w+.08,.08,b.d+.08),edgeMat);
   e.position.set(m.position.x,b.h+.04,m.position.z);world.add(e);
 }
-const ground=new THREE.Mesh(new THREE.PlaneGeometry(150,260,30,52),mat(0x16252d,.92));
-ground.rotation.x=-Math.PI/2;ground.position.set(0,-.04,80);ground.receiveShadow=true;world.add(ground);
-const grid=new THREE.GridHelper(150,30,0x6c8792,0x344851);grid.position.set(0,.01,80);world.add(grid);
+const cloudMat=new THREE.MeshStandardMaterial({color:0xdcecff,transparent:true,opacity:.55,roughness:1});
+for(let i=0;i<18;i++){
+  const cloud=new THREE.Mesh(new THREE.SphereGeometry(3+(i%3)*1.5,16,12),cloudMat);
+  cloud.scale.y=.45;cloud.position.set(-55+(i*29)%110,18+(i%4)*4,-10+(i*31)%125);world.add(cloud);
+}
 
 const player=new THREE.Group();
 const body=new THREE.Mesh(new THREE.CapsuleGeometry(.48,1.05,8,16),playerMat);
@@ -64,7 +78,7 @@ const ring=new THREE.Mesh(new THREE.TorusGeometry(.6,.035,8,32),edgeMat);ring.ro
 scene.add(player);
 
 const coinGroup=new THREE.Group();scene.add(coinGroup);
-const coins3d=[{x:0,z:14,y:2},{x:-1,z:23,y:3},{x:5,z:32,y:4},{x:1,z:41,y:3},{x:-5,z:50,y:4},{x:1,z:59,y:3},{x:6,z:70,y:5},{x:0,z:81,y:3},{x:-6,z:92,y:5},{x:0,z:105,y:3}];
+const coins3d=[{x:0,z:15,y:3},{x:-1,z:24,y:4},{x:6,z:32,y:4},{x:1,z:41,y:4},{x:-5,z:51,y:5},{x:1,z:60,y:4},{x:6,z:71,y:6},{x:0,z:82,y:4},{x:-6,z:93,y:5},{x:0,z:106,y:4}];
 for(const c of coins3d){
   const g=new THREE.Group();
   const m=new THREE.Mesh(new THREE.CylinderGeometry(.42,.42,.12,24),new THREE.MeshStandardMaterial({color:0xffd447,emissive:0x7a4d00,emissiveIntensity:1.2,metalness:.75,roughness:.22}));
@@ -93,13 +107,14 @@ function keydown(e){
   if(e.key==='Escape'||e.code==='Escape'){e.preventDefault();e.stopPropagation();toggleMenu();return}
   if(paused)return;
   if(e.code==='Space'&&!e.repeat)jumpPressed=true;
+  if(e.code==='ShiftLeft'||e.code==='ShiftRight')shiftHeld=true;
   setKey(e,true);
   if(['Space','ArrowUp','ArrowDown','ArrowLeft','ArrowRight'].includes(e.code))e.preventDefault();
   if(e.key.toLowerCase()==='r')respawn();
 }
-function keyup(e){setKey(e,false);if(e.code==='Space')jumpPressed=false}
+function keyup(e){setKey(e,false);if(e.code==='Space')jumpPressed=false;if(e.code==='ShiftLeft'||e.code==='ShiftRight')shiftHeld=false}
 addEventListener('keydown',keydown,true);addEventListener('keyup',keyup,true);
-addEventListener('blur',()=>{Object.keys(keys).forEach(k=>keys[k]=false);dragging=false});
+addEventListener('blur',()=>{Object.keys(keys).forEach(k=>keys[k]=false);dragging=false;shiftHeld=false;jumpPressed=false});
 
 canvas.addEventListener('mousedown',e=>{if(paused)return;dragging=true;lastX=e.clientX;lastY=e.clientY;canvas.classList.add('grabbing')});
 addEventListener('mousemove',e=>{if(!dragging||paused)return;yaw-=(e.clientX-lastX)*.006;pitch-= (e.clientY-lastY)*.004;pitch=THREE.MathUtils.clamp(pitch,-.15,1.0);lastX=e.clientX;lastY=e.clientY});
@@ -125,11 +140,11 @@ function physics(dt){
   const f=forward/len,s=side/len;
   const dir=new THREE.Vector3(s,0,f);
   dir.applyAxisAngle(new THREE.Vector3(0,1,0),yaw);
-  const accel=keys.shift?22:15;
+  const accel=shiftHeld?32:24;
   velocity.x+=dir.x*accel*dt;velocity.z+=dir.z*accel*dt;
-  const max=keys.shift?9:6.2;const horizontal=Math.hypot(velocity.x,velocity.z);
+  const max=shiftHeld?14:9;const horizontal=Math.hypot(velocity.x,velocity.z);
   if(horizontal>max){velocity.x*=max/horizontal;velocity.z*=max/horizontal}
-  const drag=Math.pow(.82,dt*60);velocity.x*=drag;velocity.z*=drag;
+  const drag=Math.pow(.88,dt*60);velocity.x*=drag;velocity.z*=drag;
   if(jumpPressed&&onGround){velocity.y=10.5;onGround=false;jumpPressed=false}
   velocity.y-=25*dt;
   const oldY=player.position.y;
@@ -142,7 +157,7 @@ function physics(dt){
       if(b.z+ b.d>checkpoint.z+5){checkpoint={x:b.x+b.w/2,y:top,z:b.z+b.d/2};level=Math.max(level,platforms.indexOf(b)+1);say('CHECKPOINT '+level+' ✓')}
     }
   }
-  if(player.position.y<-12)respawn();
+  if(player.position.y<-8)respawn();
   for(const c of coinGroup.children){if(!c.visible)continue;c.rotation.y+=dt*4;if(player.position.distanceTo(c.position)<1.5){c.visible=false;coins++;if(coins===5)say('METADE DAS MOEDAS! 🪙');if(coins===10)say('TODAS AS MOEDAS! ⭐')}}
   if(player.position.z>105&&onGround&&!won){won=true;say('VOCÊ VENCEU! 🏆')}
   updateHud();
