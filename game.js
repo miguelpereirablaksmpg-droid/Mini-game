@@ -97,7 +97,8 @@ function cam(x,y,z){
 function poly(points,fill,stroke){
   ctx.beginPath();
   points.forEach((q,i)=>i?ctx.lineTo(q.x,q.y):ctx.moveTo(q.x,q.y));
-  ctx.closePath(); ctx.fillStyle=fill; ctx.fill();
+  ctx.closePath();
+  if(fill){ctx.fillStyle=fill;ctx.fill();}
   if(stroke){ctx.strokeStyle=stroke;ctx.stroke();}
 }
 function visible(qs){return qs.some(q=>q.depth>1.2);}
@@ -186,7 +187,7 @@ function update(){
     p.vx+=moveX*.32*boost;p.vz+=moveZ*.42*boost;
     p.vx*=.86;p.vz*=.91;
     p.vx=Math.max(-5,Math.min(5,p.vx));p.vz=Math.max(-5,Math.min(5,p.vz));
-    if((keys.space||keys.w||keys.arrowup)&&p.on){p.vy=9.5;p.on=false;}
+    if(keys.space&&p.on){p.vy=9.5;p.on=false;}
     p.vy-=.42;p.x+=p.vx*.12;p.z+=p.vz*.16;p.y+=p.vy*.12;p.on=false;
     for(const b of platforms){
       if(p.x>b.x-.6&&p.x<b.x+b.w+.6&&p.z>b.z-.6&&p.z<b.z+b.d+.6&&p.vy<=0&&p.y<=b.h+1&&p.y>=b.h-.7){
