@@ -18,7 +18,8 @@ let yaw=0,pitch=.28,distance=11;
 const clock=new THREE.Clock();
 const keys={};
 let paused=false,coins=0,level=1,won=false,quality=1,dragging=false,lastX=0,lastY=0;
-let checkpoint={x:0,y:2,z:4};
+let checkpoint={x:0,y:1.5,z:4};
+let jumpPressed=false;
 
 scene.add(new THREE.HemisphereLight(0xbfe8ff,0x18222d,1.8));
 const sun=new THREE.DirectionalLight(0xffe1ad,3.2);
@@ -57,7 +58,7 @@ const grid=new THREE.GridHelper(150,30,0x6c8792,0x344851);grid.position.set(0,.0
 
 const player=new THREE.Group();
 const body=new THREE.Mesh(new THREE.CapsuleGeometry(.48,1.05,8,16),playerMat);
-body.castShadow=true;body.position.y=1.05;player.add(body);
+body.castShadow=true;body.position.y=1.005;player.add(body);
 const visor=new THREE.Mesh(new THREE.BoxGeometry(.58,.18,.08),darkMat);visor.position.set(0,1.25,-.45);player.add(visor);
 const ring=new THREE.Mesh(new THREE.TorusGeometry(.6,.035,8,32),edgeMat);ring.rotation.x=Math.PI/2;ring.position.y=.08;player.add(ring);
 scene.add(player);
@@ -90,11 +91,13 @@ function setKey(e,down){
 }
 function keydown(e){
   if(e.key==='Escape'||e.code==='Escape'){e.preventDefault();e.stopPropagation();toggleMenu();return}
+  if(paused)return;
+  if(e.code==='Space'&&!e.repeat)jumpPressed=true;
   setKey(e,true);
   if(['Space','ArrowUp','ArrowDown','ArrowLeft','ArrowRight'].includes(e.code))e.preventDefault();
   if(e.key.toLowerCase()==='r')respawn();
 }
-function keyup(e){setKey(e,false)}
+function keyup(e){setKey(e,false);if(e.code==='Space')jumpPressed=false}
 addEventListener('keydown',keydown,true);addEventListener('keyup',keyup,true);
 addEventListener('blur',()=>{Object.keys(keys).forEach(k=>keys[k]=false);dragging=false});
 
@@ -103,11 +106,11 @@ addEventListener('mousemove',e=>{if(!dragging||paused)return;yaw-=(e.clientX-las
 addEventListener('mouseup',()=>{dragging=false;canvas.classList.remove('grabbing')});
 canvas.addEventListener('wheel',e=>{if(paused)return;distance=THREE.MathUtils.clamp(distance+e.deltaY*.012,6,18);e.preventDefault()},{passive:false});
 
-function respawn(){player.position.set(checkpoint.x,checkpoint.y,checkpoint.z);velocity.set(0,0,0);say('CHECKPOINT ↻')}
+function respawn(){player.position.set(checkpoint.x,checkpoint.y,checkpoint.z);velocity.set(0,0,0);onGround=false;won=false;say('CHECKPOINT ↻')}
 function toggleMenu(force){paused=typeof force==='boolean'?force:!paused;const m=document.querySelector('#menu');m.classList.toggle('hidden',!paused);m.setAttribute('aria-hidden',String(!paused));m.style.display=paused?'grid':'none';if(!paused){document.querySelector('#settings').classList.add('hidden');document.querySelector('#manual').classList.add('hidden')}}
 const menu=document.querySelector('#menu');menu.style.display='none';
 document.querySelector('#resume').addEventListener('click',()=>toggleMenu(false));
-document.querySelector('#restartBtn').addEventListener('click',()=>{checkpoint={x:0,y:2,z:4};reset();toggleMenu(false)});
+document.querySelector('#restartBtn').addEventListener('click',()=>{checkpoint={x:0,y:1.5,z:4};reset();toggleMenu(false)});
 document.querySelector('#settingsBtn').addEventListener('click',()=>{document.querySelector('#settings').classList.toggle('hidden');document.querySelector('#manual').classList.add('hidden')});
 document.querySelector('#manualBtn').addEventListener('click',()=>{document.querySelector('#manual').classList.toggle('hidden');document.querySelector('#settings').classList.add('hidden')});
 document.querySelector('#quality').addEventListener('change',e=>{quality=Number(e.target.value)||1;resize()});
@@ -119,7 +122,7 @@ function physics(dt){
   const forward=(keys.w||keys.arrowup?1:0)-(keys.s||keys.arrowdown?1:0);
   const side=(keys.d||keys.arrowright?1:0)-(keys.a||keys.arrowleft?1:0);
   const len=Math.hypot(forward,side)||1;
-  const f=forward/len,s=side/len,boost=keys.shift?1.55:1;
+  const f=forward/len,s=side/len;
   const dir=new THREE.Vector3(s,0,f);
   dir.applyAxisAngle(new THREE.Vector3(0,1,0),yaw);
   const accel=keys.shift?22:15;
@@ -127,7 +130,7 @@ function physics(dt){
   const max=keys.shift?9:6.2;const horizontal=Math.hypot(velocity.x,velocity.z);
   if(horizontal>max){velocity.x*=max/horizontal;velocity.z*=max/horizontal}
   const drag=Math.pow(.82,dt*60);velocity.x*=drag;velocity.z*=drag;
-  if(keys.space&&onGround){velocity.y=10.5;onGround=false}
+  if(jumpPressed&&onGround){velocity.y=10.5;onGround=false;jumpPressed=false}
   velocity.y-=25*dt;
   const oldY=player.position.y;
   player.position.x+=velocity.x*dt;player.position.z+=velocity.z*dt;player.position.y+=velocity.y*dt;
